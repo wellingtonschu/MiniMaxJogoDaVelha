@@ -96,6 +96,72 @@ namespace JogoDaVelha
                 }
             }
         }
+        public int MiniMaxCurto(int profundidade, int alpha, int beta, out Tabuleiro filhoComMax)
+        {
+            filhoComMax = null;
+            if (profundidade == 0 || noFinal())
+            {
+                PlacarRecursivo = m_Placar;
+                return m_TurnoJogadorX ? m_Placar : -m_Placar;
+            }
+            foreach(Tabuleiro cur in ObtemFilho())
+            {
+                Tabuleiro burro;
+                int placar = -MiniMaxCurto(profundidade - 1, -beta, -alpha, out burro);
+                if (alpha < placar)
+                {
+                    alpha = placar;
+                    filhoComMax = cur;
+                    if (alpha >= beta)
+                    {
+                        break;
+                    }
+                }
+            }
+            PlacarRecursivo = alpha;
+            return alpha;
+        }
+        public int MiniMax(int profundidade, bool precisaMax, int alpha, int beta, out Tabuleiro filhoComMax)
+        {
+            filhoComMax = null;
+            System.Diagnostics.Debug.Assert(m_TurnoJogadorX = precisaMax);
+            if (profundidade == 0 || noFinal())
+            {
+                PlacarRecursivo = m_Placar;
+                return m_Placar;
+            }
+            foreach (Tabuleiro cur in ObtemFilho())
+            {
+                Tabuleiro burro;
+                int placar = cur.MiniMax(profundidade - 1, !precisaMax, alpha, beta, out burro);
+                if (!precisaMax)
+                {
+                    if (beta > placar)
+                    {
+                        beta = placar;
+                        filhoComMax = cur;
+                        if (alpha >= beta)
+                        {
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    if (alpha < placar)
+                    {
+                        alpha = placar;
+                        filhoComMax = cur;
+                        if (alpha >= beta)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+            PlacarRecursivo = precisaMax ? alpha : beta;
+            return PlacarRecursivo;
+        }
     }
     class Program
     {
