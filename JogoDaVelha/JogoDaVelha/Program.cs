@@ -162,6 +162,149 @@ namespace JogoDaVelha
             PlacarRecursivo = precisaMax ? alpha : beta;
             return PlacarRecursivo;
         }
+        public Tabuleiro EncontraProximoMovimento (int profundidade)
+        {
+            Tabuleiro ret01 = null;
+            Tabuleiro ret02 = null;
+            MiniMaxCurto (profundidade, int.MinValue + 1, int.MaxValue - 1, out ret02);
+            MiniMax(profundidade, m_TurnoJogadorX, int.MinValue + 1, int.MaxValue - 1, out ret01);
+
+            //Compara se as duas versãos do algoritmo MinMAx possuem o mesmo resultado.
+            if (!MesmoTabuleiro(ret01, ret02, true))
+            {
+                Console.WriteLine("ret01={0}\n,!= ret02={1},\n cur={2}", ret01, ret02, this);
+                throw new Exception("Funções MinMax e MinMaxCurto não batem");
+            }
+            return ret01;
+        }
+        int ObtemPlacarParaUmaLinha (EntradaGrade[] valores)
+        {
+            int contadorX = 0;
+            int contadorO = 0;
+            foreach (EntradaGrade v in valores)
+            {
+                if (v == EntradaGrade.JogadorX)
+                {
+                    contadorX++;
+                }
+                else if (v == EntradaGrade.JogadorO)
+                {
+                    contadorO++;
+                }
+            }
+
+            if (contadorO == 3 || contadorX == 3)
+            {
+                GameOver = true;
+            }
+
+            int vantagem = 1;
+            if (contadorO == 0)
+            {
+                if (m_TurnoJogadorX)
+                {
+                    vantagem = 3;
+                }
+                return (int)System.Math.Pow(10, contadorX) * vantagem;
+            }
+            else if (contadorX == 0)
+            {
+                if (!m_TurnoJogadorX)
+                {
+                    vantagem = 3;
+                }
+                return -(int)System.Math.Pow(10, contadorO) * vantagem;
+            }
+            return 0;
+        }
+        void PlacarComputado()
+        {
+            int ret = 0;
+            int[,] linhas =
+            {
+                { 0, 1, 2 },
+                { 3, 4, 5 },
+                { 6, 7, 8 },
+                { 0, 3, 6 },
+                { 1, 4, 7 },
+                { 2, 5, 8 },
+                { 0, 4, 8 },
+                { 2, 4, 6 }
+            };
+            for (int i = linhas.GetLowerBound(0); i <= linhas.GetUpperBound(0); i++)
+            {
+                ret += ObtemPlacarParaUmaLinha(new EntradaGrade[] { m_Valores[linhas[i, 0]], m_Valores[linhas[i, 1]], m_Valores[linhas[i, 2]] });
+            }
+            m_Placar = ret;
+        }
+        public Tabuleiro TransformaTabuleiro(Transforma t)
+        {
+            EntradaGrade[] valores = Enumerable.Repeat(EntradaGrade.Vazio, 9).ToArray();
+            for (int i = 0; i < 9; i++)
+            {
+                Ponto p = new Ponto(i % 3, i / 3);
+                p = t.ActOn(p);
+                int j = p.x + p.y * 3;
+                System.Diagnostics.Debug.Assert(valores[j] == EntradaGrade.Vazio);
+                valores[j] = this.m_Valores[i];
+            }
+            return new Tabuleiro(valores, m_TurnoJogadorX);
+        }
+        static bool MesmoTabuleiro(Tabuleiro a, Tabuleiro b, bool comparePlacarRecursivo)
+        {
+            if (a == b)
+                return true;
+            if (a == null || b == null)
+                return false;
+            for (int i = 0; i < a.m_Valores.Length; i++)
+            {
+                if (a.m_Valores[i] != b.m_Valores[i])
+                {
+                    return false;
+                }
+            }
+
+            if (a.m_Placar != b.m_Placar)
+            {
+                return false;
+            }
+
+            if (comparePlacarRecursivo && Math.Abs(a.PlacarRecursivo) != Math.Abs(b.PlacarRecursivo))
+            {
+                return false;
+            }
+            return true;
+        }
+        public static bool TabuleiroSimilar(Tabuleiro a, Tabuleiro b)
+        {
+            if (MesmoTabuleiro(a, b, false))
+                return true;
+
+            foreach (Transforma t in Transforma.s_Transforma)
+            {
+                Tabuleiro novoB = b.TransformaTabuleiro(t);
+                if (MesmoTabuleiro(a, novoB, false))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+    struct Ponto
+    {
+        public int x;
+        public int y;
+        public Ponto(int x0, int y0)
+        {
+            x = x0;
+            y = y0;
+        }
+    }
+    class Transforma
+    {
+        const int Tamanho = 3;
+
     }
     class Program
     {
