@@ -243,7 +243,7 @@ namespace JogoDaVelha
             for (int i = 0; i < 9; i++)
             {
                 Ponto p = new Ponto(i % 3, i / 3);
-                p = t.ActOn(p);
+                p = t.ExecAcao(p);
                 int j = p.x + p.y * 3;
                 System.Diagnostics.Debug.Assert(valores[j] == EntradaGrade.Vazio);
                 valores[j] = this.m_Valores[i];
@@ -304,12 +304,184 @@ namespace JogoDaVelha
     class Transforma
     {
         const int Tamanho = 3;
-
+        delegate Ponto TransformaFunc(Ponto p);
+        public static Ponto Rotaciona90Graus(Ponto p)
+        {
+            return new Ponto(Tamanho - p.y - 1, p.x);
+        }
+        public static Ponto EspelhoX(Ponto p)
+        {
+            return new Ponto(Tamanho - p.x - 1, p.y);
+        }
+        public static Ponto EspelhoY(Ponto p)
+        {
+            return new Ponto(p.x, Tamanho - p.y - 1);
+        }
+        List<TransformaFunc> acoes = new List<TransformaFunc>();
+        public Ponto ExecAcao(Ponto p)
+        {
+            foreach(TransformaFunc f in acoes)
+            {
+                if(f != null)
+                {
+                    p = f(p);
+                }
+            }
+            return p;
+        }
+        Transforma(TransformaFunc op, TransformaFunc[] ops)
+        {
+            if(op != null)
+            {
+                acoes.Add(op);
+            }
+            if(ops != null && ops.Length > 0)
+            {
+                acoes.AddRange(ops);
+            }
+        }
+        public static List<Transforma> s_Transforma = new List<Transforma>();
+        static Transforma()
+        {
+            for(int i = 0; i < 4; i++)
+            {
+                TransformaFunc[] ops = Enumerable.Repeat<TransformaFunc>(Rotaciona90Graus, i).ToArray();
+                s_Transforma.Add(new Transforma(null, ops));
+                s_Transforma.Add(new Transforma(EspelhoX, ops));
+                s_Transforma.Add(new Transforma(EspelhoY, ops));
+            }
+        }
+    }
+    class JogoDaVelha
+    {
+        public Tabuleiro Atual
+        {
+            get;
+            private set;
+        }
+        Tabuleiro inicial;
+        public JogoDaVelha()
+        {
+            EntradaGrade[] valores = Enumerable.Repeat(EntradaGrade.Vazio, 9).ToArray();
+            inicial = new Tabuleiro(valores, true);
+            Atual = inicial;
+        }
+        public void MovimentoDoComputador(int profundidade)
+        {
+            Tabuleiro proximo = Atual.EncontraProximoMovimento(profundidade);
+            if(proximo != null)
+            {
+                Atual = proximo;
+            }
+        }
+        public Tabuleiro ObtemNoInicial()
+        {
+            return inicial;
+        }
+        public void ObtemProximoMovimentoDoUsuario()
+        {
+            if (Atual.noFinal())
+            {
+                return;
+            }
+            while (true)
+            {
+                try
+                {
+                    Console.WriteLine("O nó atual é:\n{0}\n Informe valor em x:[0-2]", Atual);
+                    int x = int.Parse(Console.ReadLine());
+                    Console.WriteLine("Informe valor em y:[0-2]");
+                    int y = int.Parse(Console.ReadLine());
+                    Console.WriteLine("x={0},y={1}", x, y);
+                    Atual = Atual.ObtemFilhoNaPosicao(x, y);
+                    Console.WriteLine(Atual);
+                    return;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
+            }
+        }
     }
     class Program
     {
         static void Main(string[] args)
         {
+            JogoDaVelha jogo = JogoDaVelha();
+            Console.WriteLine("Posição para vitoria do JogadorO:");
+            List<Tabuleiro> historico = new List<Tabuleiro>();
+            Queue<Tabuleiro> q = new Queue<Tabuleiro>();
+            q.Enqueue(jogo.ObtemNoInicial());
+            int total = 0;
+            while(q.Count > 0)
+            {
+                Tabuleiro b = q.Dequeue();
+                Tabuleiro proximo = b.EncontraProximoMovimento(9);
+                if(Math.Abs(b.PlacarRecursivo) >= 200 && proximo != null)
+                {
+                    if(b.PlacarRecursivo < 0 && !proximo.GameOver && historico.Find(x => Tabuleiro.TabuleiroSimilar(x, b)) == null)
+                    {
+                        historico.Add(b);
+                        Console.WriteLine("[{0}] Vencedor {1}:\n{2}, proximo movimento:\n{3}", total, b.PlacarRecursivo < 0 ? "JogadorO" : "JogadorX", b, proximo);
+                        total++;
+                    }
+                }
+                else
+                {
+                    foreach(Tabuleiro c in b.ObtemFilho())
+                    {
+                        q.Enqueue(c);
+                    }
+                }
+            }
+            bool parada = false;
+            while (!parada)
+            {
+                bool primeiroUsuario = false;
+                jogo = new JogoDaVelha();
+                Console.WriteLine("Usuário contra computador, quer jogar primeiro? [s/n]");
+                if (Console.ReadLine().StartsWith("s", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    primeiroUsuario = true;
+                }
+                int profundidade = 8;
+                Console.WriteLine("Selecione o nivel:[1..8]. 1 é facil, 8 é dificil");
+                int.TryParse(Console.ReadLine(), out profundidade);
+                Console.WriteLine("{0} Joga primeiro, nivel={1}", primeiroUsuario ? "Usuario" : "Computador", profundidade);
+                while (!jogo.Atual.noFinal())
+                {
+                    if (primeiroUsuario)
+                    {
+                        jogo.ObtemProximoMovimentoDoUsuario();
+                        jogo.MovimentoDoComputador(profundidade);
+                    }
+                    else
+                    {
+                        jogo.MovimentoDoComputador(profundidade);
+                        jogo.ObtemProximoMovimentoDoUsuario();
+                    }
+                }
+                Console.WriteLine("O resultado final é \n" + jogo.Atual);
+                if (jogo.Atual.PlacarRecursivo < -200)
+                {
+                    Console.WriteLine("JogadorO ganhou.");
+                }
+                else if (jogo.Atual.PlacarRecursivo > 200)
+                {
+                    Console.WriteLine("JogadorX ganhou.");
+                }
+                else
+                {
+                    Console.WriteLine("Empate.");
+                }
+                Console.WriteLine("Jogar novamente?[s/n]");
+                if (!Console.ReadLine().StartsWith("s", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    parada = true;
+                }
+            }
+            Console.WriteLine("Fim");
         }
     }
 }
