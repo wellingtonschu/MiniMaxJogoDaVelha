@@ -34,7 +34,6 @@ namespace JogoDaVelhaIA
                     }
                 }
             }
-
             bool parada = false;
             while (!parada)
             {
@@ -45,13 +44,10 @@ namespace JogoDaVelhaIA
                 {
                     primeiroUsuario = true;
                 }
-
                 int profundidade = 8;
                 Console.WriteLine("Selecione o nivel:[1..8]. 1 é facil, 8 é dificil");
                 int.TryParse(Console.ReadLine(), out profundidade);
-
                 Console.WriteLine("{0} Joga primeiro, nivel={1}", primeiroUsuario ? "Usuario" : "Computador", profundidade);
-
                 while (!jogo.Atual.noFinal())
                 {
                     if (primeiroUsuario)
@@ -72,14 +68,12 @@ namespace JogoDaVelhaIA
                     Console.WriteLine("JogadorX ganhou.");
                 else
                     Console.WriteLine("Empate.");
-
                 Console.WriteLine("Jogar novamente[s/n]");
                 if (!Console.ReadLine().StartsWith("s", StringComparison.InvariantCultureIgnoreCase))
                 {
                     parada = true;
                 }
             }
-
             Console.WriteLine("Fim");
         }
     }

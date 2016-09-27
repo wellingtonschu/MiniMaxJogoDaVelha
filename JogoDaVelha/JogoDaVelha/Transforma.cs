@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace JogoDaVelhaIA
 {
@@ -16,7 +13,6 @@ namespace JogoDaVelhaIA
             y = y0;
         }
     }
-
     class Transforma
     {
         const int Tamanho = 3;
@@ -33,7 +29,6 @@ namespace JogoDaVelhaIA
         {
             return new Ponto(p.x, Tamanho - p.y - 1);
         }
-
         List<TransformaFunc> acoes = new List<TransformaFunc>();
         public Ponto ExecAcao(Ponto p)
         {
@@ -47,7 +42,6 @@ namespace JogoDaVelhaIA
 
             return p;
         }
-
         Transforma(TransformaFunc op, TransformaFunc[] ops)
         {
             if (op != null)

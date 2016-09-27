@@ -11,14 +11,12 @@ namespace JogoDaVelhaIA
             private set;
         }
         Tabuleiro inicia;
-
         public JogoDaVelha()
         {
             EntradaGrade[] valores = Enumerable.Repeat(EntradaGrade.Vazio, 9).ToArray();
             inicia = new Tabuleiro(valores, true);
             Atual = inicia;
         }
-
         public void MovimentoDoComputador(int profundidade)
         {
             Tabuleiro proximo = Atual.EncontraProximoMovimento(profundidade);
@@ -27,12 +25,10 @@ namespace JogoDaVelhaIA
                 Atual = proximo;
             }
         }
-
         public Tabuleiro ObtemNoInicial()
         {
             return inicia;
         }
-
         public void ObtemProximoMovimentoDoUsuario()
         {
             if (Atual.noFinal())
