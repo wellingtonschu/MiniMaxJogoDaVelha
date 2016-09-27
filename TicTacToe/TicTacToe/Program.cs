@@ -2,49 +2,22 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-/*
- * Use MiniMax and alpha-beta pruning for tic-tac-toe game.
- * The challenge part is to give the correct huristics for the current node.
- * The short version from wikipedia is more compact but requires to return different scores for terminal node.
- * So, it is better to write longer code, but it saves the time of debugging.
- * The terminal node includes: leaf node(no children), and the nodes that winner is determined.
- * Hint: Store the min/max state in the node makes the minimax code easier to understand/implement.
- * 
- * Huristic value of a note: 
- * There are 8 rows. 
- * For each row, if there are both X and O, then the score for the row is 0.
- *      If the whole row is empty, then the score is 1.
- *      If there is only one X, then the score is 10.
- *      If there are two X, then the score is 100.
- *      If there are 3 X, then the score is 1000.
- *      For player O, the score is negative.
- *      PlayerX tries to maximize the score.
- *      PlayerO tries to minimize the score.
- * 
- * Conclusion:
- * PlayerX makes the first move.
- * PlayerO can make defensive moves to force a tie.
- * If PlayerX makes the first move at the corner, then the playerO has to take the center.
- * If PlayerX makes the first move at the center, then the playerO has take the coners.
- * If PlayerX makes the first move at the top edge, then the playerO cannot take at the side edges or unconnected corners.
- * 
- * It is mcuh easier to understand and implement it in two functions: Min and Max
- * */
+
 namespace TicTacToe
 {
-    enum GridEntry : byte
+    enum EntradaGrade : byte
     {
-        Empty,
-        PlayerX,
-        PlayerO
+        Vazio,
+        JogadorX,
+        JogadorO
     }
 
-    sealed class Board
+    sealed class Tabuleiro
     {
-        GridEntry[] m_Values;
-        int m_Score;
-        bool m_TurnForPlayerX;
-        public int RecursiveScore
+        EntradaGrade[] m_Valores;
+        int m_Placar;
+        bool m_TurnoJogadorX;
+        public int PlacarRecursivo
         {
             get;
             private set;
@@ -55,11 +28,11 @@ namespace TicTacToe
             private set;
         }
 
-        public Board(GridEntry[] values, bool turnForPlayerX)
+        public Tabuleiro(EntradaGrade[] valores, bool turnoJogadorX)
         {
-            m_TurnForPlayerX = turnForPlayerX;
-            m_Values = values;
-            ComputeScore();
+            m_TurnoJogadorX = turnoJogadorX;
+            m_Valores = valores;
+            PlacarComputado();
         }
 
         public override string ToString()
@@ -69,77 +42,76 @@ namespace TicTacToe
             {
                 for (int j = 0; j < 3; j++)
                 {
-                    GridEntry v = m_Values[i * 3 + j];
+                    EntradaGrade v = m_Valores[i * 3 + j];
                     char c = '-';
-                    if (v == GridEntry.PlayerX)
+                    if (v == EntradaGrade.JogadorX)
                         c = 'X';
-                    else if (v == GridEntry.PlayerO)
+                    else if (v == EntradaGrade.JogadorO)
                         c = 'O';
                     sb.Append(c);
                 }
                 sb.Append('\n');
             }
-            sb.AppendFormat("score={0},ret={1},{2}", m_Score, RecursiveScore, m_TurnForPlayerX);
+            sb.AppendFormat("placar={0},ret={1},{2}", m_Placar, PlacarRecursivo, m_TurnoJogadorX);
             return sb.ToString();
         }
 
-        public Board GetChildAtPosition(int x, int y)
+        public Tabuleiro ObtemFilhoNaPosicao(int x, int y)
         {
             int i = x + y * 3;
-            GridEntry[] newValues = (GridEntry[])m_Values.Clone();
+            EntradaGrade[] novosValores = (EntradaGrade[])m_Valores.Clone();
 
-            if (m_Values[i] != GridEntry.Empty)
-                throw new Exception(string.Format("invalid index [{0},{1}] is taken by {2}", x, y, m_Values[i]));
+            if (m_Valores[i] != EntradaGrade.Vazio)
+                throw new Exception(string.Format("Indice inválido [{0},{1}] já possui valor de {2}", x, y, m_Valores[i]));
 
-            newValues[i] = m_TurnForPlayerX ? GridEntry.PlayerX : GridEntry.PlayerO;
-            return new Board(newValues, !m_TurnForPlayerX);
+            novosValores[i] = m_TurnoJogadorX ? EntradaGrade.JogadorX : EntradaGrade.JogadorO;
+            return new Tabuleiro(novosValores, !m_TurnoJogadorX);
         }
 
-        public bool IsTerminalNode()
+        public bool noFinal()
         {
             if (GameOver)
                 return true;
-            //if all entries are set, then it is a leaf node
-            foreach (GridEntry v in m_Values)
+            foreach (EntradaGrade v in m_Valores)
             {
-                if (v == GridEntry.Empty)
+                if (v == EntradaGrade.Vazio)
                     return false;
             }
             return true;
         }
 
-        public IEnumerable<Board> GetChildren()
+        public IEnumerable<Tabuleiro> ObtemFilho()
         {
-            for (int i = 0; i < m_Values.Length; i++)
+            for (int i = 0; i < m_Valores.Length; i++)
             {
-                if (m_Values[i] == GridEntry.Empty)
+                if (m_Valores[i] == EntradaGrade.Vazio)
                 {
-                    GridEntry[] newValues = (GridEntry[])m_Values.Clone();
-                    newValues[i] = m_TurnForPlayerX ? GridEntry.PlayerX : GridEntry.PlayerO;
-                    yield return new Board(newValues, !m_TurnForPlayerX);
+                    EntradaGrade[] novosValores = (EntradaGrade[])m_Valores.Clone();
+                    novosValores[i] = m_TurnoJogadorX ? EntradaGrade.JogadorX : EntradaGrade.JogadorO;
+                    yield return new Tabuleiro(novosValores, !m_TurnoJogadorX);
                 }
             }
         }
 
         //http://en.wikipedia.org/wiki/Alpha-beta_pruning
-        public int MiniMaxShortVersion(int depth, int alpha, int beta, out Board childWithMax)
+        public int MiniMaxCurto(int profundidade, int alpha, int beta, out Tabuleiro filhoComMax)
         {
-            childWithMax = null;
-            if (depth == 0 || IsTerminalNode())
+            filhoComMax = null;
+            if (profundidade == 0 || noFinal())
             {
                 //When it is turn for PlayO, we need to find the minimum score.
-                RecursiveScore = m_Score;
-                return m_TurnForPlayerX ? m_Score : -m_Score;
+                PlacarRecursivo = m_Placar;
+                return m_TurnoJogadorX ? m_Placar : -m_Placar;
             }
 
-            foreach (Board cur in GetChildren())
+            foreach (Tabuleiro cur in ObtemFilho())
             {
-                Board dummy;
-                int score = -cur.MiniMaxShortVersion(depth - 1, -beta, -alpha, out dummy);
-                if (alpha < score)
+                Tabuleiro burro;
+                int placar = -cur.MiniMaxCurto(profundidade - 1, -beta, -alpha, out burro);
+                if (alpha < placar)
                 {
-                    alpha = score;
-                    childWithMax = cur;
+                    alpha = placar;
+                    filhoComMax = cur;
                     if (alpha >= beta)
                     {
                         break;
@@ -147,31 +119,31 @@ namespace TicTacToe
                 }
             }
 
-            RecursiveScore = alpha;
+            PlacarRecursivo = alpha;
             return alpha;
         }
 
         //http://www.ocf.berkeley.edu/~yosenl/extras/alphabeta/alphabeta.html
-        public int MiniMax(int depth, bool needMax, int alpha, int beta, out Board childWithMax)
+        public int MiniMax(int profundidade, bool precisaMax, int alpha, int beta, out Tabuleiro filhoComMax)
         {
-            childWithMax = null;
-            System.Diagnostics.Debug.Assert(m_TurnForPlayerX == needMax);
-            if (depth == 0 || IsTerminalNode())
+            filhoComMax = null;
+            System.Diagnostics.Debug.Assert(m_TurnoJogadorX == precisaMax);
+            if (profundidade == 0 || noFinal())
             {
-                RecursiveScore = m_Score;
-                return m_Score;
+                PlacarRecursivo = m_Placar;
+                return m_Placar;
             }
 
-            foreach (Board cur in GetChildren())
+            foreach (Tabuleiro cur in ObtemFilho())
             {
-                Board dummy;
-                int score = cur.MiniMax(depth - 1, !needMax, alpha, beta, out dummy);
-                if (!needMax)
+                Tabuleiro burro;
+                int placar = cur.MiniMax(profundidade - 1, !precisaMax, alpha, beta, out burro);
+                if (!precisaMax)
                 {
-                    if (beta > score)
+                    if (beta > placar)
                     {
-                        beta = score;
-                        childWithMax = cur;
+                        beta = placar;
+                        filhoComMax = cur;
                         if (alpha >= beta)
                         {
                             break;
@@ -180,10 +152,10 @@ namespace TicTacToe
                 }
                 else
                 {
-                    if (alpha < score)
+                    if (alpha < placar)
                     {
-                        alpha = score;
-                        childWithMax = cur;
+                        alpha = placar;
+                        filhoComMax = cur;
                         if (alpha >= beta)
                         {
                             break;
@@ -192,124 +164,143 @@ namespace TicTacToe
                 }
             }
 
-            RecursiveScore = needMax ? alpha : beta;
-            return RecursiveScore;
+            PlacarRecursivo = precisaMax ? alpha : beta;
+            return PlacarRecursivo;
         }
 
-        public Board FindNextMove(int depth)
+        public Tabuleiro EncontraProximoMovimento(int profundidade)
         {
-            Board ret = null;
-            Board ret1 = null;
-            MiniMaxShortVersion(depth, int.MinValue + 1, int.MaxValue - 1, out ret1);
-            MiniMax(depth, m_TurnForPlayerX, int.MinValue + 1, int.MaxValue - 1, out ret);
+            Tabuleiro ret01 = null;
+            Tabuleiro ret02 = null;
+            MiniMaxCurto(profundidade, int.MinValue + 1, int.MaxValue - 1, out ret02);
+            MiniMax(profundidade, m_TurnoJogadorX, int.MinValue + 1, int.MaxValue - 1, out ret01);
 
             //compare the two versions of MiniMax give the same results
-            if (!IsSameBoard(ret, ret1, true))
+            if (!MesmoTabuleiro(ret01, ret02, true))
             {
-                Console.WriteLine("ret={0}\n,!= ret1={1},\ncur={2}", ret, ret1, this);
+                Console.WriteLine("ret={0}\n,!= ret1={1},\ncur={2}", ret01, ret02, this);
                 throw new Exception("Two MinMax functions don't match.");
             }
-            return ret;
+            return ret01;
         }
 
-        int GetScoreForOneLine(GridEntry[] values)
+        int ObtemPlacarParaUmaLinha(EntradaGrade[] valores)
         {
-            int countX = 0, countO = 0;
-            foreach (GridEntry v in values)
+            int contadorX = 0;
+            int contadorO = 0;
+            foreach (EntradaGrade v in valores)
             {
-                if (v == GridEntry.PlayerX)
-                    countX++;
-                else if (v == GridEntry.PlayerO)
-                    countO++;
+                if (v == EntradaGrade.JogadorX)
+                {
+                    contadorX++;
+                } else if (v == EntradaGrade.JogadorO)
+                {
+                    contadorO++;
+                }
             }
 
-            if (countO == 3 || countX == 3)
+            if (contadorO == 3 || contadorX == 3)
             {
                 GameOver = true;
             }
 
             //The player who has turn should have more advantage.
             //What we should have done
-            int advantage = 1;
-            if (countO == 0)
+            int vantagem = 1;
+            if (contadorO == 0)
             {
-                if (m_TurnForPlayerX)
-                    advantage = 3;
-                return (int)System.Math.Pow(10, countX) * advantage;
+                if (m_TurnoJogadorX)
+                {
+                    vantagem = 3;
+                }
+                return (int)System.Math.Pow(10, contadorX) * vantagem;
             }
-            else if (countX == 0)
+            else if (contadorX == 0)
             {
-                if (!m_TurnForPlayerX)
-                    advantage = 3;
-                return -(int)System.Math.Pow(10, countO) * advantage;
+                if (!m_TurnoJogadorX)
+                {
+                    vantagem = 3;
+                }
+                return -(int)System.Math.Pow(10, contadorO) * vantagem;
             }
             return 0;
         }
 
-        void ComputeScore()
+        void PlacarComputado()
         {
             int ret = 0;
-            int[,] lines = { { 0, 1, 2 },
-                           { 3, 4, 5 },
-                           { 6, 7, 8 },
-                           { 0, 3, 6 },
-                           { 1, 4, 7 },
-                           { 2, 5, 8 },
-                           { 0, 4, 8 },
-                           { 2, 4, 6 }
-                           };
+            int[,] linhas =
+                {
+                    { 0, 1, 2 },
+                    { 3, 4, 5 },
+                    { 6, 7, 8 },
+                    { 0, 3, 6 },
+                    { 1, 4, 7 },
+                    { 2, 5, 8 },
+                    { 0, 4, 8 },
+                    { 2, 4, 6 }
+                };
 
-            for (int i = lines.GetLowerBound(0); i <= lines.GetUpperBound(0); i++)
+            for (int i = linhas.GetLowerBound(0); i <= linhas.GetUpperBound(0); i++)
             {
-                ret += GetScoreForOneLine(new GridEntry[] { m_Values[lines[i, 0]], m_Values[lines[i, 1]], m_Values[lines[i, 2]] });
+                ret += ObtemPlacarParaUmaLinha(new EntradaGrade[] { m_Valores[linhas[i, 0]], m_Valores[linhas[i, 1]], m_Valores[linhas[i, 2]] });
             }
-            m_Score = ret;
+            m_Placar = ret;
         }
 
-        public Board TransformBoard(Transform t)
+        public Tabuleiro TransformaTabuleiro(Transforma t)
         {
-            GridEntry[] values = Enumerable.Repeat(GridEntry.Empty, 9).ToArray();
+            EntradaGrade[] valores = Enumerable.Repeat(EntradaGrade.Vazio, 9).ToArray();
             for (int i = 0; i < 9; i++)
             {
-                Point p = new Point(i % 3, i / 3);
-                p = t.ActOn(p);
+                Ponto p = new Ponto(i % 3, i / 3);
+                p = t.ExecAcao(p);
                 int j = p.x + p.y * 3;
-                System.Diagnostics.Debug.Assert(values[j] == GridEntry.Empty);
-                values[j] = this.m_Values[i];
+                System.Diagnostics.Debug.Assert(valores[j] == EntradaGrade.Vazio);
+                valores[j] = this.m_Valores[i];
             }
-            return new Board(values, m_TurnForPlayerX);
+            return new Tabuleiro(valores, m_TurnoJogadorX);
         }
 
-        static bool IsSameBoard(Board a, Board b, bool compareRecursiveScore)
+        static bool MesmoTabuleiro(Tabuleiro a, Tabuleiro b, bool comparaPlacarRecursivo)
         {
             if (a == b)
-                return true;
-            if (a == null || b == null)
-                return false;
-            for (int i = 0; i < a.m_Values.Length; i++)
             {
-                if (a.m_Values[i] != b.m_Values[i])
+                return true;
+            }
+            if (a == null || b == null)
+            {
+                return false;
+            }
+            for (int i = 0; i < a.m_Valores.Length; i++)
+            {
+                if (a.m_Valores[i] != b.m_Valores[i])
+                {
                     return false;
+                }
             }
 
-            if (a.m_Score != b.m_Score)
+            if (a.m_Placar != b.m_Placar)
+            {
                 return false;
-
-            if (compareRecursiveScore && Math.Abs(a.RecursiveScore) != Math.Abs(b.RecursiveScore))
+            }
+            if (comparaPlacarRecursivo && Math.Abs(a.PlacarRecursivo) != Math.Abs(b.PlacarRecursivo))
+            {
                 return false;
-
+            }
             return true;
         }
 
-        public static bool IsSimilarBoard(Board a, Board b)
+        public static bool TabuleiroSimilar(Tabuleiro a, Tabuleiro b)
         {
-            if (IsSameBoard(a, b, false))
-                return true;
-
-            foreach (Transform t in Transform.s_transforms)
+            if (MesmoTabuleiro(a, b, false))
             {
-                Board newB = b.TransformBoard(t);
-                if (IsSameBoard(a, newB, false))
+                return true;
+            }
+            foreach (Transforma t in Transforma.s_Transforma)
+            {
+                Tabuleiro novoB = b.TransformaTabuleiro(t);
+                if (MesmoTabuleiro(a, novoB, false))
                 {
                     return true;
                 }
@@ -318,113 +309,120 @@ namespace TicTacToe
         }
     }
 
-    struct Point
+    struct Ponto
     {
         public int x;
         public int y;
-        public Point(int x0, int y0)
+        public Ponto(int x0, int y0)
         {
             x = x0;
             y = y0;
         }
     }
 
-    class Transform
+    class Transforma
     {
-        const int Size = 3;
-        delegate Point TransformFunc(Point p);
-        public static Point Rotate90Degree(Point p)
+        const int Tamanho = 3;
+        delegate Ponto TransformaFunc(Ponto p);
+        public static Ponto Rotaciona90Graus(Ponto p)
         {
-            //012 -> x->y, y->size-x
-            //012
-            return new Point(Size - p.y - 1, p.x);
+            return new Ponto(Tamanho - p.y - 1, p.x);
         }
-        public static Point MirrorX(Point p)
+        public static Ponto EspelhoX(Ponto p)
         {
-            //012 -> 210
-            return new Point(Size - p.x - 1, p.y);
+            return new Ponto(Tamanho - p.x - 1, p.y);
         }
-        public static Point MirrorY(Point p)
+        public static Ponto EspelhoY(Ponto p)
         {
-            return new Point(p.x, Size - p.y - 1);
+            return new Ponto(p.x, Tamanho - p.y - 1);
         }
 
-        List<TransformFunc> actions = new List<TransformFunc>();
-        public Point ActOn(Point p)
+        List<TransformaFunc> acoes = new List<TransformaFunc>();
+        public Ponto ExecAcao(Ponto p)
         {
-            foreach (TransformFunc f in actions)
+            foreach (TransformaFunc f in acoes)
             {
                 if (f != null)
+                {
                     p = f(p);
+                }
             }
 
             return p;
         }
 
-        Transform(TransformFunc op, TransformFunc[] ops)
+        Transforma(TransformaFunc op, TransformaFunc[] ops)
         {
             if (op != null)
-                actions.Add(op);
+            {
+                acoes.Add(op);
+            }
             if (ops != null && ops.Length > 0)
-                actions.AddRange(ops);
+            {
+                acoes.AddRange(ops);
+            }
         }
-        public static List<Transform> s_transforms = new List<Transform>();
-        static Transform()
+        public static List<Transforma> s_Transforma = new List<Transforma>();
+        static Transforma()
         {
             for (int i = 0; i < 4; i++)
             {
-                TransformFunc[] ops = Enumerable.Repeat<TransformFunc>(Rotate90Degree, i).ToArray();
-                s_transforms.Add(new Transform(null, ops));
-                s_transforms.Add(new Transform(MirrorX, ops));
-                s_transforms.Add(new Transform(MirrorY, ops));
+                TransformaFunc[] ops = Enumerable.Repeat<TransformaFunc>(Rotaciona90Graus, i).ToArray();
+                s_Transforma.Add(new Transforma(null, ops));
+                s_Transforma.Add(new Transforma(EspelhoX, ops));
+                s_Transforma.Add(new Transforma(EspelhoY, ops));
             }
         }
     }
 
-    class TicTacToeGame
+    class JogoDaVelha
     {
-        public Board Current
+        public Tabuleiro Atual
         {
             get;
             private set;
         }
-        Board init;
+        Tabuleiro inicia;
 
-        public TicTacToeGame()
+        public JogoDaVelha()
         {
-            GridEntry[] values = Enumerable.Repeat(GridEntry.Empty, 9).ToArray();
-            init = new Board(values, true);
-            Current = init;
+            EntradaGrade[] valores = Enumerable.Repeat(EntradaGrade.Vazio, 9).ToArray();
+            inicia = new Tabuleiro(valores, true);
+            Atual = inicia;
         }
 
-        public void ComputerMakeMove(int depth)
+        public void MovimentoDoComputador(int profundidade)
         {
-            Board next = Current.FindNextMove(depth);
-            if (next != null)
-                Current = next;
+            Tabuleiro proximo = Atual.EncontraProximoMovimento(profundidade);
+            if (proximo != null)
+            {
+                Atual = proximo;
+            }
         }
 
-        public Board GetInitNode()
+        public Tabuleiro ObtemNoInicial()
         {
-            return init;
+            return inicia;
         }
 
-        public void GetNextMoveFromUser()
+        public void ObtemProximoMovimentoDoUsuario()
         {
-            if (Current.IsTerminalNode())
+            if (Atual.noFinal())
+            {
                 return;
+            }
 
             while (true)
             {
                 try
                 {
-                    Console.WriteLine("Current Node is\n{0}\n Please type in x:[0-2]", Current);
+                    Console.WriteLine("O nó atual é:\n{0}\n Informe valor em x:[0-2]", Atual);
                     int x = int.Parse(Console.ReadLine());
-                    Console.WriteLine("Please type in y:[0-2]");
+                    Console.WriteLine("Informe valor em y:[0-2]");
                     int y = int.Parse(Console.ReadLine());
                     Console.WriteLine("x={0},y={1}", x, y);
-                    Current = Current.GetChildAtPosition(x, y);
-                    Console.WriteLine(Current);
+                    Atual = Atual.ObtemFilhoNaPosicao(x, y);
+                    Console.WriteLine(Atual);
                     return;
                 }
                 catch (Exception e)
@@ -439,82 +437,80 @@ namespace TicTacToe
     {
         static void Main(string[] args)
         {
-            TicTacToeGame game = new TicTacToeGame();
-            Console.WriteLine("Winning positions for playerO:");
-            List<Board> history = new List<Board>();
-            Queue<Board> q = new Queue<Board>();
-            q.Enqueue(game.GetInitNode());
+            JogoDaVelha jogo = new JogoDaVelha();
+            Console.WriteLine("Posição para vitoria do JogadorO:");
+            List<Tabuleiro> historico = new List<Tabuleiro>();
+            Queue<Tabuleiro> q = new Queue<Tabuleiro>();
+            q.Enqueue(jogo.ObtemNoInicial());
             int total = 0;
             while (q.Count > 0)
             {
-                Board b = q.Dequeue();
-                Board next = b.FindNextMove(9);
-                if (Math.Abs(b.RecursiveScore) >= 200 && next != null)
+                Tabuleiro b = q.Dequeue();
+                Tabuleiro proximo = b.EncontraProximoMovimento(9);
+                if (Math.Abs(b.PlacarRecursivo) >= 200 && proximo != null)
                 {
-                    if (b.RecursiveScore < 0 &&
-                        !next.GameOver &&
-                        history.Find(x => Board.IsSimilarBoard(x, b)) == null)
+                    if (b.PlacarRecursivo < 0 && !proximo.GameOver && historico.Find(x => Tabuleiro.TabuleiroSimilar(x, b)) == null)
                     {
-                        history.Add(b);
-                        Console.WriteLine("[{0}] Winner is {1}:\n{2}, next move is:\n{3}", total, b.RecursiveScore < 0 ? "PlayerO" : "PlayerX", b, next);
+                        historico.Add(b);
+                        Console.WriteLine("[{0}] Vencedor {1}:\n{2}, proximo movimento:\n{3}", total, b.PlacarRecursivo < 0 ? "JogadorO" : "JogadorX", b, proximo);
                         total++;
                     }
                 }
                 else
                 {
-                    foreach (Board c in b.GetChildren())
+                    foreach (Tabuleiro c in b.ObtemFilho())
                     {
                         q.Enqueue(c);
                     }
                 }
             }
 
-            bool stop = false;
-            while (!stop)
+            bool parada = false;
+            while (!parada)
             {
-                bool userFirst = false;
-                game = new TicTacToeGame();
-                Console.WriteLine("User play against computer, Do you place the first step?[y/n]");
-                if (Console.ReadLine().StartsWith("y", StringComparison.InvariantCultureIgnoreCase))
+                bool primeiroUsuario = false;
+                jogo = new JogoDaVelha();
+                Console.WriteLine("Usuário contra computador, quer jogar primeiro? [s/n]");
+                if (Console.ReadLine().StartsWith("s", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    userFirst = true;
+                    primeiroUsuario = true;
                 }
 
-                int depth = 8;
-                Console.WriteLine("Please select level:[1..8]. 1 is easiet, 8 is hardest");
-                int.TryParse(Console.ReadLine(), out depth);
+                int profundidade = 8;
+                Console.WriteLine("Selecione o nivel:[1..8]. 1 é facil, 8 é dificil");
+                int.TryParse(Console.ReadLine(), out profundidade);
 
-                Console.WriteLine("{0} play first, level={1}", userFirst ? "User" : "Computer", depth);
+                Console.WriteLine("{0} Joga primeiro, nivel={1}", primeiroUsuario ? "Usuario" : "Computador", profundidade);
 
-                while (!game.Current.IsTerminalNode())
+                while (!jogo.Atual.noFinal())
                 {
-                    if (userFirst)
+                    if (primeiroUsuario)
                     {
-                        game.GetNextMoveFromUser();
-                        game.ComputerMakeMove(depth);
+                        jogo.ObtemProximoMovimentoDoUsuario();
+                        jogo.MovimentoDoComputador(profundidade);
                     }
                     else
                     {
-                        game.ComputerMakeMove(depth);
-                        game.GetNextMoveFromUser();
+                        jogo.MovimentoDoComputador(profundidade);
+                        jogo.ObtemProximoMovimentoDoUsuario();
                     }
                 }
-                Console.WriteLine("The final result is \n" + game.Current);
-                if (game.Current.RecursiveScore < -200)
-                    Console.WriteLine("PlayerO has won.");
-                else if (game.Current.RecursiveScore > 200)
-                    Console.WriteLine("PlayerX has won.");
+                Console.WriteLine("O resultado final é \n" + jogo.Atual);
+                if (jogo.Atual.PlacarRecursivo < -200)
+                    Console.WriteLine("JogadorO ganhou.");
+                else if (jogo.Atual.PlacarRecursivo > 200)
+                    Console.WriteLine("JogadorX ganhou.");
                 else
-                    Console.WriteLine("It is a tie.");
+                    Console.WriteLine("Empate.");
 
-                Console.WriteLine("Try again?[y/n]");
-                if (!Console.ReadLine().StartsWith("y", StringComparison.InvariantCultureIgnoreCase))
+                Console.WriteLine("Jogar novamente[s/n]");
+                if (!Console.ReadLine().StartsWith("s", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    stop = true;
+                    parada = true;
                 }
             }
 
-            Console.WriteLine("bye");
+            Console.WriteLine("Fim");
         }
     }
 }

@@ -27,55 +27,51 @@ namespace JogoDaVelhaIA
             get;
             private set;
         }
+
         public Tabuleiro(EntradaGrade[] valores, bool turnoJogadorX)
         {
             m_TurnoJogadorX = turnoJogadorX;
             m_Valores = valores;
             PlacarComputado();
         }
+
         public override string ToString()
         {
             StringBuilder sb = new StringBuilder();
-
             for (int i = 0; i < 3; i++)
             {
                 for (int j = 0; j < 3; j++)
                 {
                     EntradaGrade v = m_Valores[i * 3 + j];
                     char c = '-';
-
                     if (v == EntradaGrade.JogadorX)
-                    {
                         c = 'X';
-                    }
                     else if (v == EntradaGrade.JogadorO)
-                    {
                         c = 'O';
-                    }
                     sb.Append(c);
                 }
                 sb.Append('\n');
             }
-            sb.AppendFormat("Placar={0}, Ret={1},{2}", m_Placar, PlacarRecursivo, m_TurnoJogadorX);
+            sb.AppendFormat("placar={0},ret={1},{2}", m_Placar, PlacarRecursivo, m_TurnoJogadorX);
             return sb.ToString();
         }
+
         public Tabuleiro ObtemFilhoNaPosicao(int x, int y)
         {
             int i = x + y * 3;
             EntradaGrade[] novosValores = (EntradaGrade[])m_Valores.Clone();
 
-            if (m_Valores[i] != EntradaGrade.Vazio) throw new Exception(string.Format("Indice inválido [{0},{1}] já possui valor de {2}", x, y, m_Valores[i]));
+            if (m_Valores[i] != EntradaGrade.Vazio)
+                throw new Exception(string.Format("Indice inválido [{0},{1}] já possui valor de {2}", x, y, m_Valores[i]));
 
             novosValores[i] = m_TurnoJogadorX ? EntradaGrade.JogadorX : EntradaGrade.JogadorO;
-
             return new Tabuleiro(novosValores, !m_TurnoJogadorX);
         }
+
         public bool noFinal()
         {
             if (GameOver)
-            {
                 return true;
-            }
             foreach (EntradaGrade v in m_Valores)
             {
                 if (v == EntradaGrade.Vazio)
@@ -83,6 +79,7 @@ namespace JogoDaVelhaIA
             }
             return true;
         }
+
         public IEnumerable<Tabuleiro> ObtemFilho()
         {
             for (int i = 0; i < m_Valores.Length; i++)
@@ -95,18 +92,22 @@ namespace JogoDaVelhaIA
                 }
             }
         }
+
+        //http://en.wikipedia.org/wiki/Alpha-beta_pruning
         public int MiniMaxCurto(int profundidade, int alpha, int beta, out Tabuleiro filhoComMax)
         {
             filhoComMax = null;
             if (profundidade == 0 || noFinal())
             {
+                //When it is turn for PlayO, we need to find the minimum score.
                 PlacarRecursivo = m_Placar;
                 return m_TurnoJogadorX ? m_Placar : -m_Placar;
             }
+
             foreach (Tabuleiro cur in ObtemFilho())
             {
                 Tabuleiro burro;
-                int placar = -MiniMaxCurto(profundidade - 1, -beta, -alpha, out burro);
+                int placar = -cur.MiniMaxCurto(profundidade - 1, -beta, -alpha, out burro);
                 if (alpha < placar)
                 {
                     alpha = placar;
@@ -117,18 +118,22 @@ namespace JogoDaVelhaIA
                     }
                 }
             }
+
             PlacarRecursivo = alpha;
             return alpha;
         }
+
+        //http://www.ocf.berkeley.edu/~yosenl/extras/alphabeta/alphabeta.html
         public int MiniMax(int profundidade, bool precisaMax, int alpha, int beta, out Tabuleiro filhoComMax)
         {
             filhoComMax = null;
-            System.Diagnostics.Debug.Assert(m_TurnoJogadorX = precisaMax);
+            System.Diagnostics.Debug.Assert(m_TurnoJogadorX == precisaMax);
             if (profundidade == 0 || noFinal())
             {
                 PlacarRecursivo = m_Placar;
                 return m_Placar;
             }
+
             foreach (Tabuleiro cur in ObtemFilho())
             {
                 Tabuleiro burro;
@@ -158,9 +163,11 @@ namespace JogoDaVelhaIA
                     }
                 }
             }
+
             PlacarRecursivo = precisaMax ? alpha : beta;
             return PlacarRecursivo;
         }
+
         public Tabuleiro EncontraProximoMovimento(int profundidade)
         {
             Tabuleiro ret01 = null;
@@ -168,14 +175,15 @@ namespace JogoDaVelhaIA
             MiniMaxCurto(profundidade, int.MinValue + 1, int.MaxValue - 1, out ret02);
             MiniMax(profundidade, m_TurnoJogadorX, int.MinValue + 1, int.MaxValue - 1, out ret01);
 
-            //Compara se as duas versãos do algoritmo MinMAx possuem o mesmo resultado.
+            //compare the two versions of MiniMax give the same results
             if (!MesmoTabuleiro(ret01, ret02, true))
             {
-                Console.WriteLine("ret01={0}\n,!= ret02={1},\n cur={2}", ret01, ret02, this);
-                throw new Exception("Funções MinMax e MinMaxCurto não batem");
+                Console.WriteLine("ret={0}\n,!= ret1={1},\ncur={2}", ret01, ret02, this);
+                throw new Exception("Two MinMax functions don't match.");
             }
             return ret01;
         }
+
         int ObtemPlacarParaUmaLinha(EntradaGrade[] valores)
         {
             int contadorX = 0;
@@ -197,6 +205,8 @@ namespace JogoDaVelhaIA
                 GameOver = true;
             }
 
+            //The player who has turn should have more advantage.
+            //What we should have done
             int vantagem = 1;
             if (contadorO == 0)
             {
@@ -216,26 +226,29 @@ namespace JogoDaVelhaIA
             }
             return 0;
         }
+
         void PlacarComputado()
         {
             int ret = 0;
             int[,] linhas =
-            {
-                { 0, 1, 2 },
-                { 3, 4, 5 },
-                { 6, 7, 8 },
-                { 0, 3, 6 },
-                { 1, 4, 7 },
-                { 2, 5, 8 },
-                { 0, 4, 8 },
-                { 2, 4, 6 }
-            };
+                {
+                    { 0, 1, 2 },
+                    { 3, 4, 5 },
+                    { 6, 7, 8 },
+                    { 0, 3, 6 },
+                    { 1, 4, 7 },
+                    { 2, 5, 8 },
+                    { 0, 4, 8 },
+                    { 2, 4, 6 }
+                };
+
             for (int i = linhas.GetLowerBound(0); i <= linhas.GetUpperBound(0); i++)
             {
                 ret += ObtemPlacarParaUmaLinha(new EntradaGrade[] { m_Valores[linhas[i, 0]], m_Valores[linhas[i, 1]], m_Valores[linhas[i, 2]] });
             }
             m_Placar = ret;
         }
+
         public Tabuleiro TransformaTabuleiro(Transforma t)
         {
             EntradaGrade[] valores = Enumerable.Repeat(EntradaGrade.Vazio, 9).ToArray();
@@ -249,12 +262,17 @@ namespace JogoDaVelhaIA
             }
             return new Tabuleiro(valores, m_TurnoJogadorX);
         }
-        static bool MesmoTabuleiro(Tabuleiro a, Tabuleiro b, bool comparePlacarRecursivo)
+
+        static bool MesmoTabuleiro(Tabuleiro a, Tabuleiro b, bool comparaPlacarRecursivo)
         {
             if (a == b)
+            {
                 return true;
+            }
             if (a == null || b == null)
+            {
                 return false;
+            }
             for (int i = 0; i < a.m_Valores.Length; i++)
             {
                 if (a.m_Valores[i] != b.m_Valores[i])
@@ -267,18 +285,19 @@ namespace JogoDaVelhaIA
             {
                 return false;
             }
-
-            if (comparePlacarRecursivo && Math.Abs(a.PlacarRecursivo) != Math.Abs(b.PlacarRecursivo))
+            if (comparaPlacarRecursivo && Math.Abs(a.PlacarRecursivo) != Math.Abs(b.PlacarRecursivo))
             {
                 return false;
             }
             return true;
         }
+
         public static bool TabuleiroSimilar(Tabuleiro a, Tabuleiro b)
         {
             if (MesmoTabuleiro(a, b, false))
+            {
                 return true;
-
+            }
             foreach (Transforma t in Transforma.s_Transforma)
             {
                 Tabuleiro novoB = b.TransformaTabuleiro(t);

@@ -33,6 +33,7 @@ namespace JogoDaVelhaIA
         {
             return new Ponto(p.x, Tamanho - p.y - 1);
         }
+
         List<TransformaFunc> acoes = new List<TransformaFunc>();
         public Ponto ExecAcao(Ponto p)
         {
@@ -43,8 +44,10 @@ namespace JogoDaVelhaIA
                     p = f(p);
                 }
             }
+
             return p;
         }
+
         Transforma(TransformaFunc op, TransformaFunc[] ops)
         {
             if (op != null)
