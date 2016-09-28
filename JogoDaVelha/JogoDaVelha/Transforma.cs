@@ -39,7 +39,6 @@ namespace JogoDaVelhaIA
                     p = f(p);
                 }
             }
-
             return p;
         }
         Transforma(TransformaFunc op, TransformaFunc[] ops)

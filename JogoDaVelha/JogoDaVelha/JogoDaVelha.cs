@@ -5,27 +5,27 @@ namespace JogoDaVelhaIA
 {
     class JogoDaVelha
     {
-        public Tabuleiro Atual
+        public ClasseMiniMax Atual
         {
             get;
             private set;
         }
-        Tabuleiro inicia;
+        ClasseMiniMax inicia;
         public JogoDaVelha()
         {
             EntradaGrade[] valores = Enumerable.Repeat(EntradaGrade.Vazio, 9).ToArray();
-            inicia = new Tabuleiro(valores, true);
+            inicia = new ClasseMiniMax(valores, true);
             Atual = inicia;
         }
         public void MovimentoDoComputador(int profundidade)
         {
-            Tabuleiro proximo = Atual.EncontraProximoMovimento(profundidade);
+            ClasseMiniMax proximo = Atual.EncontraProximoMovimento(profundidade);
             if (proximo != null)
             {
                 Atual = proximo;
             }
         }
-        public Tabuleiro ObtemNoInicial()
+        public ClasseMiniMax ObtemNoInicial()
         {
             return inicia;
         }
@@ -40,7 +40,7 @@ namespace JogoDaVelhaIA
             {
                 try
                 {
-                    Console.WriteLine("O nó atual é:\n{0}\n Informe valor em x:[0-2]", Atual);
+                    Console.WriteLine("O tabuleiro atual é:\n{0}\n Informe valor em x:[0-2]", Atual);
                     int x = int.Parse(Console.ReadLine());
                     Console.WriteLine("Informe valor em y:[0-2]");
                     int y = int.Parse(Console.ReadLine());
