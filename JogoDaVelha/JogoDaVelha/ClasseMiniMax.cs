@@ -49,7 +49,7 @@ namespace JogoDaVelhaIA
                 }
                 sb.Append('\n');
             }
-            sb.AppendFormat("placar= {0},Vez do jogador= {1}", m_Placar, m_TurnoJogadorX);
+            //sb.AppendFormat("placar= {0},Vez do jogador= {1}", m_Placar, m_TurnoJogadorX);
             return sb.ToString();
         }
         public ClasseMiniMax ObtemFilhoNaPosicao(int x, int y)

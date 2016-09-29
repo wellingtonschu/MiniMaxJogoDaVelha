@@ -40,9 +40,9 @@ namespace JogoDaVelhaIA
             {
                 try
                 {
-                    Console.WriteLine("O tabuleiro atual é:\n{0}\n Informe valor em x:[0-2]", Atual);
+                    Console.WriteLine("O tabuleiro atual é:\n{0}\n Informe valor em x:[0-1-2]", Atual);
                     int x = int.Parse(Console.ReadLine());
-                    Console.WriteLine("Informe valor em y:[0-2]");
+                    Console.WriteLine("Informe valor em y:[0-1-2]");
                     int y = int.Parse(Console.ReadLine());
                     Console.WriteLine("x={0},y={1}", x, y);
                     Atual = Atual.ObtemFilhoNaPosicao(x, y);
